@@ -1,10 +1,13 @@
 # transcripts.py
 import os
+from typing import List
 
 import googleapiclient.discovery
 
 from app.core import config
+from app.models import transcripts
 from app.models.youtube import ListVideoResponse
+from youtube_transcript_api import YouTubeTranscriptApi
 
 
 async def searchYoutubeVideos(
@@ -17,7 +20,6 @@ async def searchYoutubeVideos(
 
     api_service_name = "youtube"
     api_version = "v3"
-    print(settings.YOUTUBE_API_KEY)
     youtube = googleapiclient.discovery.build(
         api_service_name, api_version, developerKey=settings.YOUTUBE_API_KEY
     )
@@ -30,12 +32,33 @@ async def searchYoutubeVideos(
         videoCaption="closedCaption",
         videoDuration="any",
         videoEmbeddable="true",
-        maxResults=5,
+        maxResults=2,
     )
-    response: ListVideoResponse = request.execute()
+    raw_response = request.execute()
+    response = ListVideoResponse(**raw_response)
+    filteredTranscripts: List[transcripts.Transcripts] = []
 
-    return response
+    # TODO: use concurency
+    for i in range(len(response.items)):
+        videoId = response.items[i].id.videoId
+        raw_transctipts_data = await getTranscriptByVideoId(videoId)
+        list_transcripts = raw_transctipts_data.snippets
+
+        # FIX: name variables
+        for j in range(len(list_transcripts)):
+            if query in list_transcripts[j].text.lower():
+                filteredTranscripts.append(
+                    transcripts.Transcripts(
+                        text=list_transcripts[j].text, offset=0, videoId=videoId
+                    )
+                )
+    return filteredTranscripts
 
 
-async def call_youtube_transcript_api(videoId: str):
-    pass
+async def getTranscriptByVideoId(video_id: str):
+    # FIX: No transcripts were found for any of the requested language codes: ['en']
+    # eventhough videoId already searched from youtube data api
+
+    ytt_api = YouTubeTranscriptApi()
+    fetched_transcripts = ytt_api.fetch(video_id, languages=["en"])
+    return fetched_transcripts
