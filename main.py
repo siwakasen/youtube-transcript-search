@@ -5,7 +5,6 @@ from time import perf_counter
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
 from app.models.transcripts import TranscriptsResponse
-from app.services.pokemon import get_pokemon
 from app.services.transcripts import (
     get_list_transcripts,
 )
@@ -47,8 +46,3 @@ async def list(
             transcripts=transcripts[:limit],
         )
     ).model_dump()
-
-
-@app.get("/pokemon")
-async def pokemon():
-    return await get_pokemon()
