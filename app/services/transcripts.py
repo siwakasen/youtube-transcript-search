@@ -12,11 +12,11 @@ from youtube_transcript_api import YouTubeTranscriptApi
 YTT_API = YouTubeTranscriptApi()
 
 
-async def getListTranscripts(settings: config.Settings, query: str):
+async def get_list_transcripts(settings: config.Settings, query: str):
 
     # get youtube videos from youtube-data-api
     time_youtube_data_api = perf_counter()
-    youtube_videos = await getYoutubeVideosByQuery(settings, query)
+    youtube_videos = await get_youtube_videos_by_query(settings, query)
     print(
         f"Searching youtube videos from youtube-data-api take time: {perf_counter() - time_youtube_data_api}"
     )
@@ -41,7 +41,7 @@ async def process_video_transcript(video_id):
     try:
         # get transcripts data by id
         time_before = perf_counter()
-        transcript_data = await getTranscriptByVideoId(video_id)
+        transcript_data = await get_transcript_by_video_id(video_id)
         print(
             f'get transcripts:"{video_id}" take times: {perf_counter() - time_before}'
         )
@@ -65,7 +65,7 @@ async def process_video_transcript(video_id):
 
 
 # Wrap the blocking call with a thred
-async def getTranscriptByVideoId(video_id: str):
+async def get_transcript_by_video_id(video_id: str):
     return await asyncio.to_thread(_fetch_transcript, video_id)
 
 
@@ -74,7 +74,7 @@ def _fetch_transcript(video_id: str):
     return YTT_API.fetch(video_id, languages=["en"])
 
 
-async def getYoutubeVideosByQuery(
+async def get_youtube_videos_by_query(
     settings: config.Settings,
     query: str,
 ) -> ListVideoResponse:

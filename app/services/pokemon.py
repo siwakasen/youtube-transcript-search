@@ -8,10 +8,10 @@ import httpx
 MAX_POKEMON = 898
 
 
-async def getPokemon():
+async def get_pokemon():
     time_before = perf_counter()
     result = await asyncio.gather(*[get_random_pokemon_name() for _ in range(20)])
-    print(f"total times:{perf_counter() - time_before}")
+    print(f"get_pokemon:{perf_counter() - time_before}")
     return result
 
 

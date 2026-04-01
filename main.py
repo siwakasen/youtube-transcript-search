@@ -4,9 +4,9 @@ from time import perf_counter
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, status
 from app.models.transcripts import TranscriptsResponse
-from app.services.pokemon import getPokemon
+from app.services.pokemon import get_pokemon
 from app.services.transcripts import (
-    getListTranscripts,
+    get_list_transcripts,
 )
 from app.core import config
 
@@ -22,12 +22,6 @@ def get_settings():
 @app.get(
     "/api",
     response_model=TranscriptsResponse,
-    responses={
-        status.HTTP_404_NOT_FOUND: {
-            "model": TranscriptsResponse,
-            "description": "Transcripts not found",
-        }
-    },
 )
 async def list(
     settings: Annotated[config.Settings, Depends(get_settings)],
@@ -35,7 +29,7 @@ async def list(
     limit: int = 10,
 ):
     time_get_list = perf_counter()
-    transcripts = await getListTranscripts(settings, query=q)
+    transcripts = await get_list_transcripts(settings, query=q)
     print(f"getListTranscripts take times: {perf_counter() - time_get_list} ")
     if len(transcripts) == 0:
         raise HTTPException(
@@ -55,4 +49,4 @@ async def list(
 
 @app.get("/pokemon")
 async def captions():
-    return await getPokemon()
+    return await get_pokemon()
