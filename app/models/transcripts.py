@@ -1,13 +1,13 @@
 # transcripts.py
-from typing import List, Optional
+from typing import List
 from pydantic import BaseModel
 
 
 class Transcripts(BaseModel):
     text: str
-    duration: Optional[float]
+    duration: float = 0
     videoId: str
-    offset: Optional[int]
+    offset: int = 0
 
 
 class TranscriptsResponse(BaseModel):
