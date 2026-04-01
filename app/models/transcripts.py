@@ -6,7 +6,7 @@ from pydantic import BaseModel
 # TODO: find offset function, if not found remove it
 class Transcripts(BaseModel):
     text: str
-    offset: int
+    duration: float
     videoId: str
 
 

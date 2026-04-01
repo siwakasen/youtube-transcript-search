@@ -1,27 +1,84 @@
 # transcripts.py
 import os
+import asyncio
+from time import perf_counter
 from typing import List
-
 import googleapiclient.discovery
-
 from app.core import config
 from app.models import transcripts
 from app.models.youtube import ListVideoResponse
 from youtube_transcript_api import YouTubeTranscriptApi
 
+YTT_API = YouTubeTranscriptApi()
 
-async def searchYoutubeVideos(
+
+async def getListTranscripts(settings: config.Settings, query: str):
+    # get youtube videos from youtube-data-api
+    time_youtube_data_api = perf_counter()
+    youtube_videos = await getYoutubeVideosByQuery(settings, query)
+    print(
+        f"Searching youtube videos from youtube-data-api take time: {perf_counter() - time_youtube_data_api}"
+    )
+
+    # get youtube captions earch youtube videos
+    tasks = [process_video_transcript(item.id.videoId) for item in youtube_videos.items]
+    time_before = perf_counter()
+    results = await asyncio.gather(*tasks)
+    print(f"total times: {perf_counter() - time_before}")
+    # flatten
+    filtered_transcripts = [t for sub in results for t in sub]
+
+    return filtered_transcripts
+
+
+async def process_video_transcript(video_id):
+    results: List[transcripts.Transcripts] = []
+
+    try:
+        time_before = perf_counter()
+        transcript_data = await getTranscriptByVideoId(video_id)
+        print(
+            f'get transcripts:"{video_id}" take times: {perf_counter() - time_before}'
+        )
+
+        if not transcript_data or not transcript_data.snippets:
+            return results
+
+        for snippet in transcript_data.snippets:
+            results.append(
+                transcripts.Transcripts(
+                    text=snippet.text,
+                    duration=snippet.duration,
+                    videoId=video_id,
+                )
+            )
+    except Exception:
+        # optional: logging
+        return results
+
+    return results
+
+
+async def getTranscriptByVideoId(video_id: str):
+    return await asyncio.to_thread(_fetch_transcript, video_id)
+
+
+def _fetch_transcript(video_id: str):
+    ytt_api = YouTubeTranscriptApi()
+    return ytt_api.fetch(video_id, languages=["en"])
+
+
+async def getYoutubeVideosByQuery(
     settings: config.Settings,
     query: str,
-):
-    # Disable OAuthlib's HTTPS verification when running locally.
-    # *DO NOT* leave this option enabled in production.
+) -> ListVideoResponse:
+    # env handling
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1" if settings.ENV == "DEV" else "0"
 
-    api_service_name = "youtube"
-    api_version = "v3"
     youtube = googleapiclient.discovery.build(
-        api_service_name, api_version, developerKey=settings.YOUTUBE_API_KEY
+        "youtube",
+        "v3",
+        developerKey=settings.YOUTUBE_API_KEY,
     )
 
     request = youtube.search().list(
@@ -30,35 +87,12 @@ async def searchYoutubeVideos(
         relevanceLanguage="en",
         type="video",
         videoCaption="closedCaption",
-        videoDuration="any",
         videoEmbeddable="true",
-        maxResults=2,
+        maxResults=5,
+        order="viewCount",
     )
+
     raw_response = request.execute()
     response = ListVideoResponse(**raw_response)
-    filteredTranscripts: List[transcripts.Transcripts] = []
 
-    # TODO: use concurency
-    for i in range(len(response.items)):
-        videoId = response.items[i].id.videoId
-        raw_transctipts_data = await getTranscriptByVideoId(videoId)
-        list_transcripts = raw_transctipts_data.snippets
-
-        # FIX: name variables
-        for j in range(len(list_transcripts)):
-            if query in list_transcripts[j].text.lower():
-                filteredTranscripts.append(
-                    transcripts.Transcripts(
-                        text=list_transcripts[j].text, offset=0, videoId=videoId
-                    )
-                )
-    return filteredTranscripts
-
-
-async def getTranscriptByVideoId(video_id: str):
-    # FIX: No transcripts were found for any of the requested language codes: ['en']
-    # eventhough videoId already searched from youtube data api
-
-    ytt_api = YouTubeTranscriptApi()
-    fetched_transcripts = ytt_api.fetch(video_id, languages=["en"])
-    return fetched_transcripts
+    return response

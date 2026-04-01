@@ -1,10 +1,13 @@
 # main.py
 from functools import lru_cache
-from typing import Annotated, List
+from time import perf_counter
+from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, status
-from app.models.transcripts import Transcripts, TranscriptsResponse
-from app.data.dummy import TRANSCRIPTS_DATA_DUMMY
-from app.services.transcripts import searchYoutubeVideos
+from app.models.transcripts import TranscriptsResponse
+from app.services.pokemon import getPokemon
+from app.services.transcripts import (
+    getListTranscripts,
+)
 from app.core import config
 
 app = FastAPI()
@@ -31,12 +34,10 @@ async def list(
     q: str,
     limit: int = 10,
 ):
-    filtered: List[Transcripts] = [
-        Transcripts(**t)
-        for t in TRANSCRIPTS_DATA_DUMMY
-        if q.lower() in t["text"].lower()
-    ]
-    if len(filtered) == 0:
+    time_get_list = perf_counter()
+    transcripts = await getListTranscripts(settings, query=q)
+    print(f"getListTranscripts take times: {perf_counter() - time_get_list} ")
+    if len(transcripts) == 0:
         raise HTTPException(
             status_code=404,
             detail=TranscriptsResponse(
@@ -45,11 +46,13 @@ async def list(
         )
     return (
         TranscriptsResponse(
-            message="Success getting transcripts", query=q, transcripts=filtered[:limit]
+            message="Success getting transcripts",
+            query=q,
+            transcripts=transcripts[:limit],
         )
     ).model_dump()
 
 
-@app.get("/search")
-async def search(settings: Annotated[config.Settings, Depends(get_settings)], q: str):
-    return await searchYoutubeVideos(settings, q)
+@app.get("/pokemon")
+async def captions():
+    return await getPokemon()
