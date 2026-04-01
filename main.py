@@ -2,7 +2,7 @@
 from functools import lru_cache
 from time import perf_counter
 from typing import Annotated
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException
 from app.models.transcripts import TranscriptsResponse
 from app.services.pokemon import get_pokemon
 from app.services.transcripts import (
@@ -30,7 +30,7 @@ async def list(
 ):
     time_get_list = perf_counter()
     transcripts = await get_list_transcripts(settings, query=q)
-    print(f"getListTranscripts take times: {perf_counter() - time_get_list} ")
+    print(f"get_list_transcripts: {perf_counter() - time_get_list} ")
     if len(transcripts) == 0:
         raise HTTPException(
             status_code=404,

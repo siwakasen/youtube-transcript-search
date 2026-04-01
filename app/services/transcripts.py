@@ -7,7 +7,7 @@ import googleapiclient.discovery
 from app.core import config
 from app.models import transcripts
 from app.models.youtube import ListVideoResponse
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import IpBlocked, RequestBlocked, YouTubeTranscriptApi
 
 YTT_API = YouTubeTranscriptApi()
 
@@ -17,9 +17,7 @@ async def get_list_transcripts(settings: config.Settings, query: str):
     # get youtube videos from youtube-data-api
     time_youtube_data_api = perf_counter()
     youtube_videos = await get_youtube_videos_by_query(settings, query)
-    print(
-        f"Searching youtube videos from youtube-data-api take time: {perf_counter() - time_youtube_data_api}"
-    )
+    print(f"get_youtube_videos_by_query: {perf_counter() - time_youtube_data_api}")
 
     # defining task from each youtube videos id
     tasks = [process_video_transcript(item.id.videoId) for item in youtube_videos.items]
@@ -42,9 +40,7 @@ async def process_video_transcript(video_id):
         # get transcripts data by id
         time_before = perf_counter()
         transcript_data = await get_transcript_by_video_id(video_id)
-        print(
-            f'get transcripts:"{video_id}" take times: {perf_counter() - time_before}'
-        )
+        print(f'get transcripts "{video_id}": {perf_counter() - time_before}')
 
         if not transcript_data or not transcript_data.snippets:
             return results
@@ -57,7 +53,13 @@ async def process_video_transcript(video_id):
                     videoId=video_id,
                 )
             )
-    except Exception:
+    except RequestBlocked as e:
+        print("REQUEST BLOCKED")
+        print(e)
+        return results
+    except Exception as e:
+        print("OTHER EXCEPTION")
+        print(e)
         # optional: logging
         return results
 
