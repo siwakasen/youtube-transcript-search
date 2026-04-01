@@ -13,6 +13,7 @@ YTT_API = YouTubeTranscriptApi()
 
 
 async def getListTranscripts(settings: config.Settings, query: str):
+
     # get youtube videos from youtube-data-api
     time_youtube_data_api = perf_counter()
     youtube_videos = await getYoutubeVideosByQuery(settings, query)
@@ -20,11 +21,14 @@ async def getListTranscripts(settings: config.Settings, query: str):
         f"Searching youtube videos from youtube-data-api take time: {perf_counter() - time_youtube_data_api}"
     )
 
-    # get youtube captions earch youtube videos
+    # defining task from each youtube videos id
     tasks = [process_video_transcript(item.id.videoId) for item in youtube_videos.items]
+
+    # call all task concurennly with asyncio
     time_before = perf_counter()
     results = await asyncio.gather(*tasks)
     print(f"total times: {perf_counter() - time_before}")
+
     # flatten
     filtered_transcripts = [t for sub in results for t in sub]
 
@@ -35,6 +39,7 @@ async def process_video_transcript(video_id):
     results: List[transcripts.Transcripts] = []
 
     try:
+        # get transcripts data by id
         time_before = perf_counter()
         transcript_data = await getTranscriptByVideoId(video_id)
         print(
@@ -59,13 +64,14 @@ async def process_video_transcript(video_id):
     return results
 
 
+# Wrap the blocking call with a thred
 async def getTranscriptByVideoId(video_id: str):
     return await asyncio.to_thread(_fetch_transcript, video_id)
 
 
+# YTT_API.fetch is synchronus so it's gonna blocking the event loop
 def _fetch_transcript(video_id: str):
-    ytt_api = YouTubeTranscriptApi()
-    return ytt_api.fetch(video_id, languages=["en"])
+    return YTT_API.fetch(video_id, languages=["en"])
 
 
 async def getYoutubeVideosByQuery(
