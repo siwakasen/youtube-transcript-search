@@ -1,10 +1,11 @@
 import asyncio
+import logging
 from random import randint
 from time import perf_counter
 
 import httpx
 
-
+logger = logging.getLogger("uvicorn.error")
 MAX_POKEMON = 898
 
 
@@ -21,7 +22,9 @@ async def get_random_pokemon_name() -> str:
     time_before = perf_counter()
     async with httpx.AsyncClient() as client:
         response = await client.get(pokemon_url)
-        print(f"get pokemon id:{pokemon_id} take times: {perf_counter() - time_before}")
+        logger.info(
+            f"get pokemon id:{pokemon_id} take times: {perf_counter() - time_before}"
+        )
         data = response.json()
 
         return data["name"]

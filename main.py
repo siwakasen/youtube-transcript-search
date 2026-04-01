@@ -50,5 +50,5 @@ async def list(
 
 
 @app.get("/pokemon")
-async def captions():
+async def pokemon():
     return await get_pokemon()
