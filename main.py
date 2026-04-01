@@ -1,5 +1,6 @@
 # main.py
 from functools import lru_cache
+import logging
 from time import perf_counter
 from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
@@ -11,6 +12,7 @@ from app.services.transcripts import (
 from app.config import config
 
 app = FastAPI()
+logger = logging.getLogger("uvicorn.error")
 
 
 @lru_cache
@@ -30,7 +32,7 @@ async def list(
 ):
     time_get_list = perf_counter()
     transcripts = await get_list_transcripts(settings, query=q)
-    print(f"get_list_transcripts: {perf_counter() - time_get_list} ")
+    logger.info(f"get_list_transcripts: {perf_counter() - time_get_list} ")
     if len(transcripts) == 0:
         raise HTTPException(
             status_code=404,

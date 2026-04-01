@@ -1,31 +1,37 @@
 # transcripts.py
+import logging
 import os
 import asyncio
 from time import perf_counter
 from typing import List
 import googleapiclient.discovery
-from app.core import config
+from app.config import config
 from app.models import transcripts
 from app.models.youtube import ListVideoResponse
 from youtube_transcript_api import RequestBlocked, YouTubeTranscriptApi
 
 YTT_API = YouTubeTranscriptApi()
+logger = logging.getLogger("uvicorn.error")
 
 
 async def get_list_transcripts(settings: config.Settings, query: str):
-
     # get youtube videos from youtube-data-api
     time_youtube_data_api = perf_counter()
     youtube_videos = await get_youtube_videos_by_query(settings, query)
-    print(f"get_youtube_videos_by_query: {perf_counter() - time_youtube_data_api}")
+    logger.info(
+        f"get_youtube_videos_by_query: {perf_counter() - time_youtube_data_api}"
+    )
 
     # defining task from each youtube videos id
-    tasks = [process_video_transcript(item.id.videoId) for item in youtube_videos.items]
+    tasks = [
+        process_video_transcript(item.id.videoId, query)
+        for item in youtube_videos.items
+    ]
 
     # call all task concurennly with asyncio
     time_before = perf_counter()
     results = await asyncio.gather(*tasks)
-    print(f"total times: {perf_counter() - time_before}")
+    logger.info(f"total times: {perf_counter() - time_before}")
 
     # flatten
     filtered_transcripts = [t for sub in results for t in sub]
@@ -33,33 +39,32 @@ async def get_list_transcripts(settings: config.Settings, query: str):
     return filtered_transcripts
 
 
-async def process_video_transcript(video_id):
+async def process_video_transcript(video_id: str, query: str):
     results: List[transcripts.Transcripts] = []
 
     try:
         # get transcripts data by id
         time_before = perf_counter()
         transcript_data = await get_transcript_by_video_id(video_id)
-        print(f'get transcripts "{video_id}": {perf_counter() - time_before}')
+        logger.info(f'get transcripts "{video_id}": {perf_counter() - time_before}')
 
         if not transcript_data or not transcript_data.snippets:
             return results
 
         for snippet in transcript_data.snippets:
-            results.append(
-                transcripts.Transcripts(
-                    text=snippet.text,
-                    duration=snippet.duration,
-                    videoId=video_id,
+            if query in snippet.text:
+                results.append(
+                    transcripts.Transcripts(
+                        text=snippet.text,
+                        duration=snippet.duration,
+                        videoId=video_id,
+                    )
                 )
-            )
     except RequestBlocked as e:
-        print("REQUEST BLOCKED")
-        print(e)
+        logger.warning(e)
         return results
     except Exception as e:
-        print("OTHER EXCEPTION")
-        print(e)
+        logger.error(e)
         # optional: logging
         return results
 
@@ -96,7 +101,7 @@ async def get_youtube_videos_by_query(
         type="video",
         videoCaption="closedCaption",
         videoEmbeddable="true",
-        maxResults=5,
+        maxResults=25,
         order="viewCount",
     )
 
