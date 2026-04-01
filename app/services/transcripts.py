@@ -7,7 +7,7 @@ import googleapiclient.discovery
 from app.core import config
 from app.models import transcripts
 from app.models.youtube import ListVideoResponse
-from youtube_transcript_api import IpBlocked, RequestBlocked, YouTubeTranscriptApi
+from youtube_transcript_api import RequestBlocked, YouTubeTranscriptApi
 
 YTT_API = YouTubeTranscriptApi()
 

@@ -8,7 +8,7 @@ from app.services.pokemon import get_pokemon
 from app.services.transcripts import (
     get_list_transcripts,
 )
-from app.core import config
+from app.config import config
 
 app = FastAPI()
 
