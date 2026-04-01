@@ -1,13 +1,13 @@
 # transcripts.py
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
-# TODO: find offset function, if not found remove it
 class Transcripts(BaseModel):
     text: str
-    duration: float
+    duration: Optional[float]
     videoId: str
+    offset: Optional[int]
 
 
 class TranscriptsResponse(BaseModel):
