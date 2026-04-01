@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
 from app.models.transcripts import TranscriptsResponse
 from app.services.transcripts import (
-    get_list_transcripts,
+    list_transcripts,
 )
 from app.config import config
 
@@ -30,7 +30,7 @@ async def list(
     limit: int = 10,
 ):
     time_get_list = perf_counter()
-    transcripts = await get_list_transcripts(settings, query=q)
+    transcripts = await list_transcripts(settings, query=q)
     logger.info(f"get_list_transcripts: {perf_counter() - time_get_list} ")
     if len(transcripts) == 0:
         raise HTTPException(

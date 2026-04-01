@@ -14,12 +14,12 @@ YTT_API = YouTubeTranscriptApi()
 logger = logging.getLogger("uvicorn.error")
 
 
-async def get_list_transcripts(settings: config.Settings, query: str):
+async def list_transcripts(settings: config.Settings, query: str):
     # get youtube videos from youtube-data-api
     time_youtube_data_api = perf_counter()
-    youtube_videos = await get_youtube_videos_by_query(settings, query)
+    youtube_videos = await get_videos_from_youtube_api(settings, query)
     logger.info(
-        f"get_youtube_videos_by_query: {perf_counter() - time_youtube_data_api}"
+        f"get_videos_from_youtube_api: {perf_counter() - time_youtube_data_api}"
     )
 
     # defining task from each youtube videos id
@@ -45,8 +45,10 @@ async def process_video_transcript(video_id: str, query: str):
     try:
         # get transcripts data by id
         time_before = perf_counter()
-        transcript_data = await get_transcript_by_video_id(video_id)
-        logger.info(f'get transcripts "{video_id}": {perf_counter() - time_before}')
+        transcript_data = await get_transcript_from_ytt_api(video_id)
+        logger.info(
+            f'get_transcript_from_ytt_api "{video_id}": {perf_counter() - time_before}'
+        )
 
         if not transcript_data or not transcript_data.snippets:
             return results
@@ -72,7 +74,7 @@ async def process_video_transcript(video_id: str, query: str):
 
 
 # Wrap the blocking call with a thred
-async def get_transcript_by_video_id(video_id: str):
+async def get_transcript_from_ytt_api(video_id: str):
     return await asyncio.to_thread(_fetch_transcript, video_id)
 
 
@@ -81,7 +83,7 @@ def _fetch_transcript(video_id: str):
     return YTT_API.fetch(video_id, languages=["en"])
 
 
-async def get_youtube_videos_by_query(
+async def get_videos_from_youtube_api(
     settings: config.Settings,
     query: str,
 ) -> ListVideoResponse:
@@ -101,7 +103,7 @@ async def get_youtube_videos_by_query(
         type="video",
         videoCaption="closedCaption",
         videoEmbeddable="true",
-        maxResults=25,
+        maxResults=10,
         order="viewCount",
     )
 
